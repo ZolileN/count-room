@@ -128,6 +128,17 @@ export interface WardPartyResult {
   candidate?: string;
 }
 
+/** Compact [partyId, votes] pairs, zero-vote parties removed. */
+export type VotePairs = [number, number][];
+
+export interface VotingDistrict {
+  id: number;
+  /** Valid votes (ward + PR ballots) counted in this district. */
+  valid: number;
+  /** Votes by party, ward + PR ballots combined (IEC TotalValidVotes at VD level). */
+  votes: VotePairs;
+}
+
 export interface Ward {
   id: number;
   /** Ward number within the council (last three digits of the IEC ward ID). */
@@ -141,6 +152,9 @@ export interface Ward {
   vdsTotal: number;
   /** Ward-ballot results, sorted by votes, parties with zero votes removed. */
   parties: WardPartyResult[];
+  /** Ward + PR ballot votes by party in this ward (for share and swing). */
+  combined: VotePairs;
+  vds: VotingDistrict[];
 }
 
 export interface MunicData extends CouncilSummary {
@@ -158,4 +172,18 @@ export interface Sourced<T> {
   stale: boolean;
   source: "live" | "fixtures" | "memory" | "snapshot";
   warnings: string[];
+}
+
+/** A previous election's results for one council, indexed for comparison by voting district. */
+export interface PreviousCouncil {
+  id: number;
+  year: number;
+  reportDate: string;
+  totalSeats: number;
+  /** Council-level result. */
+  parties: { id: number; short: string; pct: number; seats: number; votes: number }[];
+  /** Voting district ID -> votes by party (ward + PR ballots combined). */
+  vds: Record<number, VotePairs>;
+  /** Voting district ID -> ward ID in that election. */
+  vdWard: Record<number, number>;
 }

@@ -1,3 +1,10 @@
+CREATE TABLE "latest_snapshot" (
+	"id" integer PRIMARY KEY NOT NULL,
+	"taken_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"report_date" timestamp with time zone NOT NULL,
+	"payload" jsonb NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "snapshots" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"taken_at" timestamp with time zone DEFAULT now() NOT NULL,

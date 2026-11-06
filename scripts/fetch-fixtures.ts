@@ -3,6 +3,7 @@
  *
  *   npm run fetch-fixtures            # national, 9 provinces, party list, fixture councils
  *   npm run fetch-fixtures -- 3003    # also save extra municipality files by ID
+ *   npm run fetch-fixtures -- --map   # also fetch the national council boundaries
  *
  * Respects the IEC's max-age=60: a file fetched less than 60 s ago (per fixtures/.fetch-log.json)
  * is skipped, and requests are spaced out rather than fired in parallel.
@@ -31,14 +32,18 @@ async function readLog(): Promise<Log> {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function main() {
-  const extra = process.argv.slice(2).map(Number).filter(Number.isFinite);
+  const extra = process.argv.slice(2).filter((a) => /^\d+$/.test(a)).map(Number);
   const munics = [...new Set([...DEFAULT_MUNICS, ...extra])];
 
   const jobs: { url: string; file: string }[] = [
     { url: iecUrls.national(), file: "2026/national.json" },
     ...PROVINCE_IDS.map((p) => ({ url: iecUrls.province(p), file: `2026/province${p}.json` })),
     ...munics.map((m) => ({ url: iecUrls.munic(m), file: `2026/munic${m}.json` })),
+    ...munics.map((m) => ({ url: iecUrls.munic(m, 2021), file: `2021/munic${m}.json` })),
+    ...munics.map((m) => ({ url: iecUrls.wardMap(m), file: `mapdata/municward${m}.json` })),
     { url: iecUrls.partyList(), file: "partylist.json" },
+    // Raw national council boundaries (2.5 MB compressed); npm run build-map simplifies it into public/.
+    ...(process.argv.includes("--map") ? [{ url: iecUrls.nationalMunicMap(), file: "mapdata/nationalMunic.json" }] : []),
   ];
 
   const log = await readLog();

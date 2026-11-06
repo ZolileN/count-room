@@ -22,6 +22,8 @@ import type {
   MunicData,
   NationalData,
   PartyResult,
+  PreviousCouncil,
+  VotePairs,
   Progress,
   ProvinceData,
   ProvinceSummary,
@@ -232,6 +234,8 @@ export function normaliseWard(w: RawWardResult, lookup?: PartyLookup): Ward {
     .filter((p) => p.votes > 0)
     .sort((a, b) => b.votes - a.votes || a.id - b.id);
   const vds = w.VotingDistrictResults;
+  const pairs = (list: RawPartyBallotResult[]): VotePairs =>
+    list.filter((p) => n(p.TotalValidVotes) > 0).map((p) => [p.ID, n(p.TotalValidVotes)] as [number, number]).sort((a, b) => b[1] - a[1]);
   return {
     id: w.WardID,
     number: w.WardID % 1000,
@@ -241,6 +245,39 @@ export function normaliseWard(w: RawWardResult, lookup?: PartyLookup): Ward {
     vdsReported: vds.filter((v) => v.PartyBallotResults.some((p) => n(p.TotalValidVotes) > 0)).length,
     vdsTotal: vds.length,
     parties,
+    combined: pairs(w.PartyBallotResults),
+    vds: vds.map((v) => {
+      const votes = pairs(v.PartyBallotResults);
+      return { id: v.VotingDistrictID, valid: votes.reduce((a, x) => a + x[1], 0), votes };
+    }),
+  };
+}
+
+/** A previous election's council file, reduced to council totals and per-VD votes. */
+export function normalisePrevious(json: unknown, year: number, lookup?: PartyLookup): PreviousCouncil {
+  const r = MunicFileSchema.safeParse(json);
+  if (!r.success) throw new FeedShapeError(`${year} municipality file: ${summariseIssues(r.error)}`);
+  const d = r.data;
+  const vds: Record<number, VotePairs> = {};
+  const vdWard: Record<number, number> = {};
+  for (const w of d.WardResults) {
+    for (const v of w.VotingDistrictResults) {
+      vds[v.VotingDistrictID] = v.PartyBallotResults
+        .filter((p) => n(p.TotalValidVotes) > 0)
+        .map((p) => [p.ID, n(p.TotalValidVotes)] as [number, number]);
+      vdWard[v.VotingDistrictID] = w.WardID;
+    }
+  }
+  return {
+    id: d.MunicipalityID,
+    year,
+    reportDate: d.ReportDate ?? "",
+    totalSeats: n(d.PartyBallotResults[0]?.AvailableSeats) || n(d.SeatsExpected),
+    parties: d.PartyBallotResults
+      .map((p) => ({ id: p.ID, short: shortName(p.ID, p.Name, lookup), pct: n(p.PercOfVotes), seats: n(p.TotalSeatsWon), votes: n(p.TotalValidVotes) }))
+      .sort((a, b) => b.votes - a.votes),
+    vds,
+    vdWard,
   };
 }
 

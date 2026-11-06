@@ -9,6 +9,8 @@ const nextConfig: NextConfig = {
   // Bundle the PartyList fixture so party names resolve even if the IEC is down.
   outputFileTracingIncludes: {
     "/**": ["./fixtures/partylist.json"],
+    // Local-dev only data (fixtures mode); harmless in production.
+    "/timeline": ["./fixtures/2026/timeline.jsonl"],
   },
 };
 

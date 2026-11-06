@@ -14,7 +14,9 @@
     "check": "npm run typecheck && npm run lint && npm run test",
     "fetch-fixtures": "tsx scripts/fetch-fixtures.ts",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "capture-snapshot": "tsx scripts/capture-snapshot.ts",
+    "build-map": "tsx scripts/build-map.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "1.2.0",

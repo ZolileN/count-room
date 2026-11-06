@@ -9,7 +9,17 @@ export const SOURCE_LINE = "Source: Electoral Commission of South Africa (IEC). 
 /** Honest User-Agent for every request we make to the IEC. */
 export const USER_AGENT = "CountRoom/0.1 (non-commercial election results viewer)";
 
-export const IEC_BASE = "https://results.elections.org.za/dashboards/lge/MapsJason";
+/**
+ * IEC data hosts. Overridable only so the load test can point the app at a local mock of the IEC
+ * (scripts/mock-iec.ts); production always uses the real hosts.
+ */
+export const IEC_BASE = process.env.IEC_BASE_URL ?? "https://results.elections.org.za/dashboards/lge/MapsJason";
+export const IEC_MAP_BASE = process.env.IEC_MAP_BASE_URL ?? "https://results.elections.org.za/ElectionMap/MapData";
+
+/** Year of the boundaries the IEC publishes for the 2026 wards. */
+export const BOUNDARY_YEAR = 2026;
+/** The previous local election, for swing. */
+export const PREVIOUS_YEAR = 2021 as const;
 
 /**
  * Electoral event IDs (EEIDs) for local government elections, as declared in the IEC results
@@ -47,6 +57,11 @@ export const iecUrls = {
   partyList: () => `${IEC_BASE}/2016/PartyList.js`,
   wardHistory: (wardId: number) => `${IEC_BASE}/HistoryYears/WD${wardId}.js`,
   wardVdHistory: (wardId: number) => `${IEC_BASE}/HistoryYears/WDVDs${wardId}.js`,
+  municHistory: (municipalityId: number) => `${IEC_BASE}/HistoryYears/M${municipalityId}.js`,
+  /** GeoJSON: every council's boundary (large; we simplify it once into public/). */
+  nationalMunicMap: (year: number = BOUNDARY_YEAR) => `${IEC_MAP_BASE}/${year}/nationalMunic.js`,
+  /** GeoJSON: one council's ward boundaries. */
+  wardMap: (municipalityId: number, year: number = BOUNDARY_YEAR) => `${IEC_MAP_BASE}/${year}/municward${municipalityId}.js`,
 };
 
 function eeidFor(year: number): number {

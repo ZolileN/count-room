@@ -13,11 +13,12 @@
 import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { unstable_cache } from "next/cache";
-import { CURRENT_EEID, IEC_MIN_INTERVAL_S, PROVINCE_IDS, USER_AGENT, dataSource, iecUrls } from "../config";
+import { CURRENT_EEID, IEC_MIN_INTERVAL_S, PREVIOUS_YEAR, PROVINCE_IDS, USER_AGENT, dataSource, iecUrls } from "../config";
+import { numProp, toSvgPaths, type GeoFeature, type MapGeometry } from "../geo";
 import type { PartyLookup } from "../parties";
 import { collectDrift } from "./drift";
-import { normaliseMunic, normaliseNational, normalisePartyList, normaliseProvince } from "./normalise";
-import type { MunicData, NationalData, ProvinceData, Sourced } from "./types";
+import { normaliseMunic, normaliseNational, normalisePartyList, normalisePrevious, normaliseProvince } from "./normalise";
+import type { MunicData, NationalData, PreviousCouncil, ProvinceData, Sourced } from "./types";
 import type { SnapshotPayload } from "../../db/payload";
 
 /** Data older than this (we failed to refresh it) is flagged as stale in the UI. */
@@ -45,6 +46,10 @@ export class NotInFixturesError extends Error {
 }
 
 const memory = new Map<string, Entry<unknown>>();
+/** Fetches in progress, so concurrent cache misses on one instance share a single IEC request. */
+const inflight = new Map<string, Promise<Entry<unknown>>>();
+/** Count of real IEC requests made by this instance, by key (exposed for the load test). */
+export const iecRequestCount = new Map<string, number>();
 
 async function fetchIecJson(url: string): Promise<unknown> {
   const res = await fetch(url, {
@@ -113,22 +118,35 @@ interface LoaderSpec<T> {
   url: string;
   fixture: string;
   normalise: (json: unknown, lookup: PartyLookup) => T;
+  /** Seconds. Live results: 60 (the IEC's max-age). Static files (2021, boundaries): longer. */
+  revalidate?: number;
 }
 
 function makeLoader<T>(spec: LoaderSpec<T>) {
-  const load = async (): Promise<Entry<T>> => {
-    // Per-instance guard: never refetch a file this instance fetched in the last 60 s.
-    const prev = memory.get(spec.key) as Entry<T> | undefined;
-    if (prev && Date.now() - Date.parse(prev.fetchedAt) < IEC_MIN_INTERVAL_S * 1000) return prev;
+  const revalidate = spec.revalidate ?? IEC_MIN_INTERVAL_S;
+  const fetchOnce = async (): Promise<Entry<T>> => {
     const lookup = await getPartyLookup();
+    iecRequestCount.set(spec.key, (iecRequestCount.get(spec.key) ?? 0) + 1);
     const json = await fetchIecJson(spec.url);
     const { value, warnings } = collectDrift(() => spec.normalise(json, lookup));
     const entry: Entry<T> = { data: value, fetchedAt: new Date().toISOString(), warnings };
     memory.set(spec.key, entry);
     return entry;
   };
-  const cached = unstable_cache(load, ["iec", String(CURRENT_EEID), spec.key, "v1"], {
-    revalidate: IEC_MIN_INTERVAL_S,
+  const load = async (): Promise<Entry<T>> => {
+    // Per-instance guard: never refetch a file this instance fetched within its revalidate window.
+    const prev = memory.get(spec.key) as Entry<T> | undefined;
+    if (prev && Date.now() - Date.parse(prev.fetchedAt) < revalidate * 1000) return prev;
+    // Coalesce: if a fetch for this file is already running, wait for it instead of starting another.
+    let p = inflight.get(spec.key) as Promise<Entry<T>> | undefined;
+    if (!p) {
+      p = fetchOnce().finally(() => inflight.delete(spec.key));
+      inflight.set(spec.key, p);
+    }
+    return p;
+  };
+  const cached = unstable_cache(load, ["iec", String(CURRENT_EEID), spec.key, "v2"], {
+    revalidate,
     tags: ["iec", `iec:${spec.key}`],
   });
 
@@ -142,7 +160,7 @@ function makeLoader<T>(spec: LoaderSpec<T>) {
     try {
       const e = await cached();
       if (!memory.has(spec.key)) memory.set(spec.key, e);
-      const stale = Date.now() - Date.parse(e.fetchedAt) > STALE_AFTER_MS;
+      const stale = revalidate <= IEC_MIN_INTERVAL_S && Date.now() - Date.parse(e.fetchedAt) > STALE_AFTER_MS;
       return { ...e, stale, source: "live" };
     } catch (err) {
       console.error(`[iec] ${spec.key} fetch failed`, err);
@@ -230,6 +248,46 @@ export async function getMunic(id: number): Promise<Sourced<MunicData>> {
       normalise: normaliseMunic,
     });
     municLoaders.set(id, loader);
+  }
+  return loader();
+}
+
+const previousLoaders = new Map<number, () => Promise<Sourced<PreviousCouncil>>>();
+
+/** The previous election (2021) for one council: council totals and per-VD votes. Cached a day. */
+export async function getPrevious(id: number): Promise<Sourced<PreviousCouncil>> {
+  let loader = previousLoaders.get(id);
+  if (!loader) {
+    loader = makeLoader<PreviousCouncil>({
+      key: `munic-${id}-${PREVIOUS_YEAR}`,
+      url: iecUrls.munic(id, PREVIOUS_YEAR),
+      fixture: `${PREVIOUS_YEAR}/munic${id}.json`,
+      normalise: (json, lookup) => normalisePrevious(json, PREVIOUS_YEAR, lookup),
+      revalidate: 86_400,
+    });
+    previousLoaders.set(id, loader);
+  }
+  return loader();
+}
+
+const wardMapLoaders = new Map<number, () => Promise<Sourced<MapGeometry>>>();
+
+/** One council's 2026 ward boundaries as simplified SVG paths (shape id = IEC ward ID). Cached a day. */
+export async function getWardMap(id: number): Promise<Sourced<MapGeometry>> {
+  let loader = wardMapLoaders.get(id);
+  if (!loader) {
+    loader = makeLoader<MapGeometry>({
+      key: `wardmap-${id}`,
+      url: iecUrls.wardMap(id),
+      fixture: `mapdata/municward${id}.json`,
+      normalise: (json) => {
+        const fc = json as { features?: GeoFeature[] };
+        if (!Array.isArray(fc.features)) throw new Error("ward boundary file has no features");
+        return toSvgPaths(fc.features, (f) => numProp(f, "PklWardID", "WardID"), { width: 1000, tolerance: 0.7, precision: 0 });
+      },
+      revalidate: 86_400,
+    });
+    wardMapLoaders.set(id, loader);
   }
   return loader();
 }
