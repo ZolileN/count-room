@@ -5,6 +5,8 @@ import { useMemo, useRef, useState } from "react";
 import { layoutLabels } from "@/lib/labels";
 import { PlaceLabels, WardNumbers } from "./PlaceLabels";
 import { useUnitsPerPixel } from "./useUnitsPerPixel";
+import { MAX_ZOOM, usePanZoom } from "./usePanZoom";
+import { ZoomControls } from "./ZoomControls";
 import { partyColour } from "@/lib/parties";
 import { MapSvg, partyFill, swingFill, type ShapeStyle } from "./MapSvg";
 import { useGeometry } from "./useGeometry";
@@ -47,7 +49,8 @@ export function WardMap({
   const [showTowns, setShowTowns] = useState(true);
   const [showNumbers, setShowNumbers] = useState(false);
   const wrap = useRef<HTMLDivElement>(null);
-  const upp = useUnitsPerPixel(wrap, [geometry]);
+  const pz = usePanZoom(wrap, geometry?.viewBox ?? null);
+  const upp = useUnitsPerPixel(wrap, [geometry, pz.viewBox]);
   const byId = useMemo(() => new Map(wards.map((w) => [w.id, w])), [wards]);
   const partyShort = parties.find((p) => p.id === party)?.short ?? "";
 
@@ -77,11 +80,12 @@ export function WardMap({
   );
   const placed = useMemo(() => {
     if (!geometry?.labels || !upp || !showTowns) return [];
-    const [vx, vy, vw, vh] = geometry.viewBox.split(" ").map(Number) as [number, number, number, number];
+    const view = pz.view ?? (geometry.viewBox.split(" ").map(Number) as [number, number, number, number]);
     // Keep town names clear of ward numbers when both are shown.
     const avoid = numberItems.map((n) => ({ x0: n.x - 8 * upp, y0: n.y - 6 * upp, x1: n.x + 8 * upp, y1: n.y + 6 * upp }));
-    return layoutLabels(geometry.labels, { upp, view: [vx, vy, vw, vh], max: 18, avoid });
-  }, [geometry, upp, showTowns, numberItems]);
+    // Zooming in makes room for more names.
+    return layoutLabels(geometry.labels, { upp, view, max: Math.min(60, Math.round(18 * pz.zoom)), avoid });
+  }, [geometry, upp, showTowns, numberItems, pz.view, pz.zoom]);
   const btn = (active: boolean) =>
     `min-h-9 rounded-md border px-3 text-sm ${active ? "border-ink bg-surface-2 font-semibold" : "border-line bg-surface text-ink-2"}`;
 
@@ -108,19 +112,33 @@ export function WardMap({
         ) : null}
       </div>
 
-      <div ref={wrap} className="rounded-lg border border-line bg-surface p-2">
+      <div ref={wrap} className="relative overflow-hidden rounded-lg border border-line bg-surface p-2">
         {geometry ? (
-          <MapSvg geometry={geometry} styles={styles} label={`${councilName} ward map`} onSelect={(id) => setSelected((s) => (s === id ? null : id))}>
-            {upp && numberItems.length ? <WardNumbers items={numberItems} upp={upp} /> : null}
-            {upp && placed.length ? <PlaceLabels placed={placed} upp={upp} /> : null}
-          </MapSvg>
+          <>
+            <MapSvg
+              geometry={geometry}
+              styles={styles}
+              viewBox={pz.viewBox}
+              zoom={pz.zoom}
+              touchAction={pz.touchAction}
+              label={`${councilName} ward map`}
+              onSelect={(id) => setSelected((s) => (s === id ? null : id))}
+            >
+              {upp && numberItems.length ? <WardNumbers items={numberItems} upp={upp} /> : null}
+              {upp && placed.length ? <PlaceLabels placed={placed} upp={upp} /> : null}
+            </MapSvg>
+            <ZoomControls zoom={pz.zoom} max={MAX_ZOOM} onIn={pz.zoomIn} onOut={pz.zoomOut} onReset={pz.reset} />
+          </>
         ) : (
           <div className="grid aspect-[10/9] place-items-center text-sm text-ink-3">{failed ? "The ward map could not load." : "Loading ward map…"}</div>
         )}
       </div>
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-        <span className="text-xs text-ink-3">{geometry?.labels?.length ? "Place names: GeoNames (CC BY 4.0)" : ""}</span>
+        <span className="text-xs text-ink-3">
+          Pinch, double-tap or + / − to zoom; drag to move when zoomed.
+          {geometry?.labels?.length ? " Place names: GeoNames (CC BY 4.0)." : ""}
+        </span>
         <span className="flex gap-2">
           {geometry?.labels?.length ? (
             <button type="button" aria-pressed={showTowns} onClick={() => setShowTowns((v) => !v)} className="rounded-full border border-line px-3 py-1 text-xs text-ink-2 hover:border-line-strong">

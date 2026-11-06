@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useMemo, useRef, useState } from "react";
 import { useUnitsPerPixel } from "./useUnitsPerPixel";
-import { citiesFor } from "@/lib/cities";
+import { CITIES, citiesFor } from "@/lib/cities";
+import { MAX_ZOOM, usePanZoom } from "./usePanZoom";
+import { ZoomControls } from "./ZoomControls";
 import { CityLabels } from "./CityLabels";
 import mapAssets from "@/lib/geo-data/map-assets.json";
 import type { MapCouncil } from "@/lib/map-councils";
@@ -65,18 +67,24 @@ export function CouncilMap({ councils, provinces, provinceId }: { councils: MapC
   // Screen pixels -> viewBox units, so city labels stay the same size at any zoom.
   const wrap = useRef<HTMLDivElement>(null);
   const [showCities, setShowCities] = useState(true);
-  const upp = useUnitsPerPixel(wrap, [geometry, viewBox]);
+  const pz = usePanZoom(wrap, geometry ? (viewBox ?? geometry.viewBox) : null);
+  const upp = useUnitsPerPixel(wrap, [geometry, pz.viewBox]);
+  // Zoomed into the national map: show the smaller towns too.
+  const cities = provinceId === undefined && pz.zoom >= 2.5 ? CITIES : citiesFor(provinceId);
 
   const leaders = new Map<number, string>();
   for (const c of councils) if (c.leader && (provinceId === undefined || c.provinceId === provinceId)) leaders.set(c.leader.id, c.leader.short);
 
   return (
     <div>
-      <div ref={wrap} className="rounded-lg border border-line bg-surface p-2">
+      <div ref={wrap} className="relative overflow-hidden rounded-lg border border-line bg-surface p-2">
         {geometry ? (
-          <MapSvg geometry={geometry} styles={styles} viewBox={viewBox} label="Map of councils: tap a council to open it">
-            {showCities && upp && geometry.projection ? <CityLabels cities={citiesFor(provinceId)} projection={geometry.projection} upp={upp} /> : null}
-          </MapSvg>
+          <>
+            <MapSvg geometry={geometry} styles={styles} viewBox={pz.viewBox} zoom={pz.zoom} touchAction={pz.touchAction} label="Map of councils: tap a council to open it">
+              {showCities && upp && geometry.projection ? <CityLabels cities={cities} projection={geometry.projection} upp={upp} /> : null}
+            </MapSvg>
+            <ZoomControls zoom={pz.zoom} max={MAX_ZOOM} onIn={pz.zoomIn} onOut={pz.zoomOut} onReset={pz.reset} />
+          </>
         ) : (
           <div className="grid place-items-center text-sm text-ink-3" style={{ aspectRatio: "1000 / 877" }}>
             {failed ? (
@@ -89,7 +97,8 @@ export function CouncilMap({ councils, provinces, provinceId }: { councils: MapC
           </div>
         )}
       </div>
-      <div className="mt-2 flex justify-end">
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <span className="text-xs text-ink-3">Zoom: pinch, double-tap, Ctrl + scroll, or + / −. Drag to move when zoomed.</span>
         <button
           type="button"
           aria-pressed={showCities}

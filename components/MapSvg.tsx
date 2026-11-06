@@ -23,6 +23,8 @@ export function MapSvg({
   viewBox,
   onSelect,
   children,
+  zoom = 1,
+  touchAction,
 }: {
   geometry: MapGeometry;
   styles: Map<number, ShapeStyle>;
@@ -31,22 +33,33 @@ export function MapSvg({
   onSelect?: (id: number) => void;
   /** Drawn on top of the shapes and ignored by taps (labels). */
   children?: React.ReactNode;
+  /** Current zoom factor, so the hatch keeps the same on-screen density. */
+  zoom?: number;
+  touchAction?: string;
 }) {
-  const sw = geometry.width / 700;
+  // Borders are drawn in screen pixels (non-scaling), so they stay hairline at any zoom.
+  const hatch = 10 / zoom;
   return (
-    <svg viewBox={viewBox ?? geometry.viewBox} width="100%" role="group" aria-label={label} className="block h-auto max-h-[70vh] touch-manipulation">
+    <svg
+      viewBox={viewBox ?? geometry.viewBox}
+      width="100%"
+      role="group"
+      aria-label={label}
+      className="block h-auto max-h-[70vh] select-none"
+      style={{ touchAction: touchAction ?? "manipulation" }}
+    >
       <defs>
-        <pattern id="hatch" width="10" height="10" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-          <line x1="0" y1="0" x2="0" y2="10" stroke="var(--hung)" strokeWidth="4" />
+        <pattern id="hatch" width={hatch} height={hatch} patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2={hatch} stroke="var(--hung)" strokeWidth={hatch * 0.4} />
         </pattern>
       </defs>
       {geometry.shapes.map((s) => {
         const st = styles.get(s.id);
         const body = (
           <>
-            <path d={s.d} fill={st?.fill ?? "var(--map-neutral)"} stroke="var(--map-stroke)" strokeWidth={sw} strokeLinejoin="round" fillRule="evenodd" />
+            <path d={s.d} fill={st?.fill ?? "var(--map-neutral)"} stroke="var(--map-stroke)" strokeWidth={0.75} vectorEffect="non-scaling-stroke" strokeLinejoin="round" fillRule="evenodd" />
             {st?.hatch ? <path d={s.d} fill="url(#hatch)" fillOpacity="0.85" stroke="none" fillRule="evenodd" pointerEvents="none" /> : null}
-            {st?.highlight ? <path d={s.d} fill="none" stroke="var(--ink)" strokeWidth={sw * 3} pointerEvents="none" /> : null}
+            {st?.highlight ? <path d={s.d} fill="none" stroke="var(--ink)" strokeWidth={2.5} vectorEffect="non-scaling-stroke" pointerEvents="none" /> : null}
             <title>{st?.label ?? ""}</title>
           </>
         );
