@@ -46,6 +46,8 @@ export class NotInFixturesError extends Error {
 }
 
 const memory = new Map<string, Entry<unknown>>();
+/** When each file last failed: a failing file is not retried for 60 s either (no hammering). */
+const lastFailure = new Map<string, number>();
 /** Fetches in progress, so concurrent cache misses on one instance share a single IEC request. */
 const inflight = new Map<string, Promise<Entry<unknown>>>();
 /** Count of real IEC requests made by this instance, by key (exposed for the load test). */
@@ -92,22 +94,32 @@ async function fixturePartyLookup(): Promise<PartyLookup> {
   return normalisePartyList(json);
 }
 
-export async function getPartyLookup(): Promise<PartyLookup> {
-  if (lookupMemo) return lookupMemo;
-  let lookup: PartyLookup;
-  if (dataSource() === "fixtures") {
-    lookup = await fixturePartyLookup();
-  } else {
-    try {
-      const rows = await cachedPartyList();
-      lookup = new Map(rows.map(([id, abbr, full]) => [id, { abbr, full }]));
-    } catch (err) {
-      console.error("[iec] party list unavailable; using bundled copy", err);
-      lookup = await fixturePartyLookup();
-    }
+let lookupPromise: Promise<PartyLookup> | null = null;
+
+/** Party abbreviations. Memoised as a promise, so a burst of first visitors shares one fetch. */
+export function getPartyLookup(): Promise<PartyLookup> {
+  if (lookupMemo) return Promise.resolve(lookupMemo);
+  if (!lookupPromise) {
+    lookupPromise = (async () => {
+      let lookup: PartyLookup;
+      if (dataSource() === "fixtures") {
+        lookup = await fixturePartyLookup();
+      } else {
+        try {
+          const rows = await cachedPartyList();
+          lookup = new Map(rows.map(([id, abbr, full]) => [id, { abbr, full }]));
+        } catch (err) {
+          console.error("[iec] party list unavailable; using bundled copy", err);
+          lookup = await fixturePartyLookup();
+        }
+      }
+      lookupMemo = lookup;
+      return lookup;
+    })().finally(() => {
+      lookupPromise = null;
+    });
   }
-  lookupMemo = lookup;
-  return lookup;
+  return lookupPromise;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -137,10 +149,26 @@ function makeLoader<T>(spec: LoaderSpec<T>) {
     // Per-instance guard: never refetch a file this instance fetched within its revalidate window.
     const prev = memory.get(spec.key) as Entry<T> | undefined;
     if (prev && Date.now() - Date.parse(prev.fetchedAt) < revalidate * 1000) return prev;
+    // Back off after a failure: same 60 s rule as for successful fetches.
+    const failedAt = lastFailure.get(spec.key);
+    if (failedAt !== undefined && Date.now() - failedAt < IEC_MIN_INTERVAL_S * 1000) {
+      throw new Error(`${spec.key} failed ${Math.round((Date.now() - failedAt) / 1000)} s ago; not retrying yet`);
+    }
     // Coalesce: if a fetch for this file is already running, wait for it instead of starting another.
     let p = inflight.get(spec.key) as Promise<Entry<T>> | undefined;
     if (!p) {
-      p = fetchOnce().finally(() => inflight.delete(spec.key));
+      p = fetchOnce()
+        .then(
+          (e) => {
+            lastFailure.delete(spec.key);
+            return e;
+          },
+          (err: unknown) => {
+            lastFailure.set(spec.key, Date.now());
+            throw err;
+          },
+        )
+        .finally(() => inflight.delete(spec.key));
       inflight.set(spec.key, p);
     }
     return p;
@@ -163,7 +191,7 @@ function makeLoader<T>(spec: LoaderSpec<T>) {
       const stale = revalidate <= IEC_MIN_INTERVAL_S && Date.now() - Date.parse(e.fetchedAt) > STALE_AFTER_MS;
       return { ...e, stale, source: "live" };
     } catch (err) {
-      console.error(`[iec] ${spec.key} fetch failed`, err);
+      if (!String(err).includes("not retrying yet")) console.error(`[iec] ${spec.key} fetch failed`, err);
       const m = memory.get(spec.key) as Entry<T> | undefined;
       if (m) return { ...m, stale: true, source: "memory" };
       throw new FeedUnavailableError(spec.key, err);
