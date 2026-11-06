@@ -40,6 +40,7 @@ npm run dev                  # http://localhost:3000, uses ./fixtures, never cal
 | `npm run fetch-fixtures` | Refresh `./fixtures` from the IEC (skips any file fetched in the last 60 s) |
 | `npm run fetch-fixtures -- 3003 --map` | Also save council 3003 and the raw national boundaries |
 | `npm run build-map` | Simplify the national boundaries into `public/maps/councils.<hash>.json` |
+| `npm run build-places -- ZA.txt` | Rebuild `lib/geo-data/places.json` (ward-map town names) from the GeoNames ZA dump |
 | `npm run capture-snapshot` | Append one real timeline point (from the live IEC) to `fixtures/2026/timeline.jsonl` |
 | `npm run mock-iec` / `npm run loadtest` | Load testing against a local mock of the IEC (see below) |
 | `npm run db:migrate` | Apply `drizzle/` migrations to `DATABASE_URL` |
@@ -163,6 +164,6 @@ Pure functions in `lib/model/`, unit-tested.
 
 ## Attribution and neutrality
 
-Data: Electoral Commission of South Africa (IEC), public results dashboard data; boundaries from the IEC / Municipal Demarcation Board. Count Room is not affiliated with the IEC. Results are provisional until declared.
+Data: Electoral Commission of South Africa (IEC), public results dashboard data; boundaries from the IEC / Municipal Demarcation Board; place names on ward maps from [GeoNames](https://www.geonames.org/) (CC BY 4.0), filtered to ~2,700 notable places and merged within 2.5 km. Count Room is not affiliated with the IEC. Results are provisional until declared.
 
 Count Room does not endorse any party. Coalition figures are seat arithmetic, not predictions of who will govern. Party colours follow each party's usual colour where one exists, are contrast-tested in both themes, and are always shown alongside the party's name.

@@ -32,12 +32,22 @@ export interface MapProjection {
   scale: number;
 }
 
+/** A place name to draw on a map, already projected into viewBox units. */
+export interface MapLabel {
+  name: string;
+  x: number;
+  y: number;
+  /** Higher wins when labels would overlap. */
+  score: number;
+}
+
 export interface MapGeometry {
   viewBox: string;
   width: number;
   height: number;
   shapes: MapShape[];
   projection?: MapProjection;
+  labels?: MapLabel[];
 }
 
 /** Project a lon/lat point into a map's viewBox units. */
@@ -194,4 +204,53 @@ export function numProp(f: GeoFeature, ...keys: string[]): number | null {
     if (Number.isFinite(n)) return n;
   }
   return null;
+}
+
+/** Even-odd point-in-ring test (lon/lat or any planar coordinates). */
+export function pointInRing(x: number, y: number, ring: Ring): boolean {
+  let hit = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i]!;
+    const [xj, yj] = ring[j]!;
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) hit = !hit;
+  }
+  return hit;
+}
+
+/** Inside a polygon's outer ring and outside its holes. */
+export function pointInPolygon(x: number, y: number, poly: Ring[]): boolean {
+  if (!poly[0] || !pointInRing(x, y, poly[0])) return false;
+  for (let i = 1; i < poly.length; i++) if (pointInRing(x, y, poly[i]!)) return false;
+  return true;
+}
+
+/** [name, lon, lat, score] */
+export type PlaceRow = [string, number, number, number];
+
+/**
+ * Places that fall inside any of the features, projected for the map, best-scored first. Exact
+ * test on the unsimplified boundaries; a bounding box check first keeps it cheap.
+ */
+export function placesWithin(features: GeoFeature[], places: PlaceRow[], projection: MapProjection, limit = 60): MapLabel[] {
+  const polys = features.flatMap(polygonsOf);
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const poly of polys)
+    for (const [x, y] of poly[0] ?? []) {
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  const out: MapLabel[] = [];
+  const seen = new Set<string>();
+  for (const [name, lon, lat, score] of places) {
+    if (lon < minX || lon > maxX || lat < minY || lat > maxY) continue;
+    if (seen.has(name)) continue;
+    if (!polys.some((poly) => pointInPolygon(lon, lat, poly))) continue;
+    const [x, y] = projectPoint(lon, lat, projection);
+    out.push({ name, x: Math.round(x * 10) / 10, y: Math.round(y * 10) / 10, score });
+    seen.add(name);
+    if (out.length >= limit) break;
+  }
+  return out;
 }

@@ -14,7 +14,8 @@ import { readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { unstable_cache } from "next/cache";
 import { CURRENT_EEID, IEC_MIN_INTERVAL_S, PREVIOUS_YEAR, PROVINCE_IDS, USER_AGENT, dataSource, iecUrls } from "../config";
-import { numProp, toSvgPaths, type GeoFeature, type MapGeometry } from "../geo";
+import { numProp, placesWithin, toSvgPaths, type GeoFeature, type MapGeometry, type PlaceRow } from "../geo";
+import placesData from "../geo-data/places.json";
 import type { PartyLookup } from "../parties";
 import { collectDrift } from "./drift";
 import { normaliseMunic, normaliseNational, normalisePartyList, normalisePrevious, normaliseProvince } from "./normalise";
@@ -173,7 +174,7 @@ function makeLoader<T>(spec: LoaderSpec<T>) {
     }
     return p;
   };
-  const cached = unstable_cache(load, ["iec", String(CURRENT_EEID), spec.key, "v2"], {
+  const cached = unstable_cache(load, ["iec", String(CURRENT_EEID), spec.key, "v3"], {
     revalidate,
     tags: ["iec", `iec:${spec.key}`],
   });
@@ -311,7 +312,10 @@ export async function getWardMap(id: number): Promise<Sourced<MapGeometry>> {
       normalise: (json) => {
         const fc = json as { features?: GeoFeature[] };
         if (!Array.isArray(fc.features)) throw new Error("ward boundary file has no features");
-        return toSvgPaths(fc.features, (f) => numProp(f, "PklWardID", "WardID"), { width: 1000, tolerance: 0.7, precision: 0 });
+        const geo = toSvgPaths(fc.features, (f) => numProp(f, "PklWardID", "WardID"), { width: 1000, tolerance: 0.7, precision: 0 });
+        // Town and suburb names inside this council (GeoNames), for labelling the ward map.
+        if (geo.projection) geo.labels = placesWithin(fc.features, placesData.places as PlaceRow[], geo.projection);
+        return geo;
       },
       revalidate: 86_400,
     });

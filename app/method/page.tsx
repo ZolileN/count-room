@@ -148,6 +148,10 @@ export default function MethodPage() {
         leading on votes while counting (pale), with hung councils hatched. Colour is never the only cue: every shape has a
         text label, and the same information is in the council list.
       </p>
+      <p>
+        Town and suburb names on the ward maps come from GeoNames (geonames.org, CC BY 4.0). Where names would overlap,
+        the better-known place is shown; you can hide them, or show ward numbers instead.
+      </p>
 
       <H id="ai">The AI analyst</H>
       <p>
@@ -172,7 +176,8 @@ export default function MethodPage() {
 
       <H id="attribution">Attribution</H>
       <p>
-        Source: Electoral Commission of South Africa (IEC), public results dashboard data. Provisional until declared.{" "}
+        Source: Electoral Commission of South Africa (IEC), public results dashboard data. Provisional until declared.
+        Boundaries: IEC / Municipal Demarcation Board. Place names: GeoNames, CC BY 4.0.{" "}
         {APP_NAME} is not affiliated with the IEC. Questions about official results should go to the IEC.
       </p>
       <p className="text-ink-2">

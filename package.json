@@ -18,7 +18,8 @@
     "capture-snapshot": "tsx scripts/capture-snapshot.ts",
     "build-map": "tsx scripts/build-map.ts",
     "mock-iec": "tsx scripts/mock-iec.ts",
-    "loadtest": "tsx scripts/loadtest.ts"
+    "loadtest": "tsx scripts/loadtest.ts",
+    "build-places": "tsx scripts/build-places.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.1.0",

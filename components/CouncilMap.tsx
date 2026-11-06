@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { useUnitsPerPixel } from "./useUnitsPerPixel";
 import { citiesFor } from "@/lib/cities";
 import { CityLabels } from "./CityLabels";
 import mapAssets from "@/lib/geo-data/map-assets.json";
@@ -63,24 +64,8 @@ export function CouncilMap({ councils, provinces, provinceId }: { councils: MapC
 
   // Screen pixels -> viewBox units, so city labels stay the same size at any zoom.
   const wrap = useRef<HTMLDivElement>(null);
-  const [upp, setUpp] = useState<number | null>(null);
   const [showCities, setShowCities] = useState(true);
-  useEffect(() => {
-    const el = wrap.current;
-    if (!el || !geometry) return;
-    const measure = () => {
-      const svg = el.querySelector("svg");
-      if (!svg) return;
-      const vb = svg.viewBox.baseVal;
-      const r = svg.getBoundingClientRect();
-      if (!vb || r.width === 0 || r.height === 0) return;
-      setUpp(1 / Math.min(r.width / vb.width, r.height / vb.height));
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [geometry, viewBox]);
+  const upp = useUnitsPerPixel(wrap, [geometry, viewBox]);
 
   const leaders = new Map<number, string>();
   for (const c of councils) if (c.leader && (provinceId === undefined || c.provinceId === provinceId)) leaders.set(c.leader.id, c.leader.short);
