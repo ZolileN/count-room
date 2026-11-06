@@ -42,6 +42,8 @@ export function CoalitionCalculator({
   sims: number;
 }) {
   const [selected, setSelected] = useState<number[]>([]);
+  const [showAll, setShowAll] = useState(false);
+  const shown = coalitions.slice(0, showAll ? 40 : 10);
   const byId = useMemo(() => new Map(parties.map((p) => [p.id, p])), [parties]);
   const sel = new Set(selected);
   const chosen = selected.map((id) => byId.get(id)).filter((p): p is CalcParty => !!p);
@@ -135,7 +137,7 @@ export function CoalitionCalculator({
         <p className="text-sm text-ink-2">No combination of four or fewer of the largest parties reaches a majority.</p>
       ) : (
         <ol className="divide-y divide-line rounded-lg border border-line bg-surface">
-          {coalitions.slice(0, 30).map((c) => (
+          {shown.map((c) => (
             <li key={c.members.join("-")}>
               <button
                 type="button"
@@ -158,7 +160,11 @@ export function CoalitionCalculator({
           ))}
         </ol>
       )}
-      {coalitions.length > 30 ? <p className="mt-2 text-xs text-ink-3">Showing 30 of {coalitions.length}.</p> : null}
+      {coalitions.length > shown.length && !showAll ? (
+        <button type="button" onClick={() => setShowAll(true)} className="mt-2 text-sm text-ink-2 underline">
+          Show all {coalitions.length > 40 ? "40 of " : ""}{coalitions.length} combinations
+        </button>
+      ) : null}
     </div>
   );
 }

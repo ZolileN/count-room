@@ -32,6 +32,7 @@ export default function MethodPage() {
         <li>The national file: national totals, every province and every council (top party only), seats and completion counts.</li>
         <li>Nine province files: each province&rsquo;s top 13 parties plus &ldquo;other&rdquo;, used for the projection.</li>
         <li>A council&rsquo;s own file, fetched only when you open that council: every party, every ward, every voting district.</li>
+        <li>The same council&rsquo;s 2021 file and its 2026 ward boundaries, for the comparison and the ward map (these don&rsquo;t change, so we keep them for a day).</li>
       </ul>
       <p>
         Results are provisional until the IEC declares them. Electoral event IDs used: 2026 is {EEID[2026]}, 2021 is {EEID[2021]}.
@@ -123,6 +124,43 @@ export default function MethodPage() {
         line, where dropping any one member would fall short. Independent councillors are left out of the list because each
         votes individually. While a council is counting, the percentage is the share of seat simulations in which the
         combination still reaches the line.
+      </p>
+
+      <H id="swing">Change since 2021</H>
+      <p>
+        Ward boundaries were redrawn for 2026, so a 2026 ward and the 2021 ward with the same number can cover different
+        areas. Instead of comparing wards, we compare <em>voting districts</em>, which mostly keep their numbers. For each
+        ward we take the voting districts that have reported in 2026 and also existed in 2021, and compare each
+        party&rsquo;s share across exactly that set in both years. That redraws 2021 on the 2026 boundaries, and stays
+        like-for-like while counting is still going on.
+      </p>
+      <ul>
+        <li>Shares are of all valid votes, ward and PR ballots together: the only party breakdown the IEC publishes per voting district.</li>
+        <li>Each comparison says how much of the counted vote it covers. Wards where less than 60% can be matched are left out of the &ldquo;biggest swings&rdquo; list.</li>
+        <li>&ldquo;Votes needed&rdquo; uses the ward ballot: the runner-up needed the margin plus one more votes, or half the margin plus one voters switching from the leader.</li>
+        <li>Turnout is not shown per ward: the IEC results files do not include registered voters per ward.</li>
+      </ul>
+
+      <H id="maps">Maps</H>
+      <p>
+        Boundaries come from the IEC&rsquo;s results map (Municipal Demarcation Board boundaries, 2026 wards), simplified so
+        the whole country loads quickly on a phone. Councils are coloured by their largest party once declared, or the party
+        leading on votes while counting (pale), with hung councils hatched. Colour is never the only cue: every shape has a
+        text label, and the same information is in the council list.
+      </p>
+
+      <H id="ai">The AI analyst</H>
+      <p>
+        Where it is switched on, the Ask page sends your question, with the figures this site is showing, to an AI model
+        (Claude, by Anthropic). It is instructed to use only those figures, to say when they don&rsquo;t answer the question,
+        and not to predict results or take sides. It can still make mistakes, so check any number against the relevant
+        page. Questions are not stored with anything that identifies you.
+      </p>
+
+      <H id="privacy">Privacy</H>
+      <p>
+        {APP_NAME} has no accounts and sets no cookies. Where analytics are switched on, we count page views with
+        Cloudflare Web Analytics, which uses no cookies and does not track individuals across sites.
       </p>
 
       <H id="neutrality">Neutrality</H>
