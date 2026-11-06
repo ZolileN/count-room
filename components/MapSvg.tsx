@@ -22,12 +22,15 @@ export function MapSvg({
   label,
   viewBox,
   onSelect,
+  children,
 }: {
   geometry: MapGeometry;
   styles: Map<number, ShapeStyle>;
   label: string;
   viewBox?: string;
   onSelect?: (id: number) => void;
+  /** Drawn on top of the shapes and ignored by taps (labels). */
+  children?: React.ReactNode;
 }) {
   const sw = geometry.width / 700;
   return (
@@ -76,6 +79,7 @@ export function MapSvg({
         }
         return <g key={s.id}>{body}</g>;
       })}
+      {children ? <g pointerEvents="none">{children}</g> : null}
     </svg>
   );
 }

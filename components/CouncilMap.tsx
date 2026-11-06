@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { citiesFor } from "@/lib/cities";
+import { CityLabels } from "./CityLabels";
 import mapAssets from "@/lib/geo-data/map-assets.json";
 import type { MapCouncil } from "@/lib/map-councils";
 import { partyColour } from "@/lib/parties";
@@ -59,14 +61,37 @@ export function CouncilMap({ councils, provinces, provinceId }: { councils: MapC
     return `${x0 - pad} ${y0 - pad} ${x1 - x0 + 2 * pad} ${y1 - y0 + 2 * pad}`;
   }, [geometry, provinceId, byId]);
 
+  // Screen pixels -> viewBox units, so city labels stay the same size at any zoom.
+  const wrap = useRef<HTMLDivElement>(null);
+  const [upp, setUpp] = useState<number | null>(null);
+  const [showCities, setShowCities] = useState(true);
+  useEffect(() => {
+    const el = wrap.current;
+    if (!el || !geometry) return;
+    const measure = () => {
+      const svg = el.querySelector("svg");
+      if (!svg) return;
+      const vb = svg.viewBox.baseVal;
+      const r = svg.getBoundingClientRect();
+      if (!vb || r.width === 0 || r.height === 0) return;
+      setUpp(1 / Math.min(r.width / vb.width, r.height / vb.height));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [geometry, viewBox]);
+
   const leaders = new Map<number, string>();
   for (const c of councils) if (c.leader && (provinceId === undefined || c.provinceId === provinceId)) leaders.set(c.leader.id, c.leader.short);
 
   return (
     <div>
-      <div className="rounded-lg border border-line bg-surface p-2">
+      <div ref={wrap} className="rounded-lg border border-line bg-surface p-2">
         {geometry ? (
-          <MapSvg geometry={geometry} styles={styles} viewBox={viewBox} label="Map of councils: tap a council to open it" />
+          <MapSvg geometry={geometry} styles={styles} viewBox={viewBox} label="Map of councils: tap a council to open it">
+            {showCities && upp && geometry.projection ? <CityLabels cities={citiesFor(provinceId)} projection={geometry.projection} upp={upp} /> : null}
+          </MapSvg>
         ) : (
           <div className="grid place-items-center text-sm text-ink-3" style={{ aspectRatio: "1000 / 877" }}>
             {failed ? (
@@ -78,6 +103,16 @@ export function CouncilMap({ councils, provinces, provinceId }: { councils: MapC
             )}
           </div>
         )}
+      </div>
+      <div className="mt-2 flex justify-end">
+        <button
+          type="button"
+          aria-pressed={showCities}
+          onClick={() => setShowCities((v) => !v)}
+          className="rounded-full border border-line px-3 py-1 text-xs text-ink-2 hover:border-line-strong"
+        >
+          {showCities ? "Hide city names" : "Show city names"}
+        </button>
       </div>
       <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-ink-2">
         {[...leaders].map(([id, short]) => (

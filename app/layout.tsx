@@ -6,6 +6,7 @@ import { partyColourCss } from "@/lib/parties";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Nav } from "@/components/Nav";
 import { Analytics } from "@/components/Analytics";
+import { Credit } from "@/components/Credit";
 import "./globals.css";
 
 const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
@@ -65,6 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               will govern. <Link href="/method" className="underline">How the numbers work</Link>.
             </p>
             <p className="text-xs text-ink-3">{APP_NAME} · Not affiliated with the IEC.</p>
+            <Credit />
           </div>
         </footer>
         <Analytics />

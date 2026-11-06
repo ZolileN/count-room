@@ -22,11 +22,27 @@ export interface MapShape {
   cy: number;
 }
 
+/** How lon/lat were turned into viewBox units, so points (e.g. cities) can be placed on the map. */
+export interface MapProjection {
+  minX: number;
+  maxY: number;
+  /** cos(mid-latitude): horizontal scale correction. */
+  k: number;
+  /** viewBox units per degree of latitude. */
+  scale: number;
+}
+
 export interface MapGeometry {
   viewBox: string;
   width: number;
   height: number;
   shapes: MapShape[];
+  projection?: MapProjection;
+}
+
+/** Project a lon/lat point into a map's viewBox units. */
+export function projectPoint(lon: number, lat: number, p: MapProjection): Position {
+  return [(lon - p.minX) * p.k * p.scale, (p.maxY - lat) * p.scale];
 }
 
 function sqSegDist(p: Position, a: Position, b: Position): number {
@@ -167,7 +183,7 @@ export function toSvgPaths(
     const c = (best as { c: Position } | null)?.c ?? [0, 0];
     shapes.push({ id, d, cx: r(c[0]), cy: r(c[1]) });
   }
-  return { viewBox: `0 0 ${width} ${height}`, width, height, shapes };
+  return { viewBox: `0 0 ${width} ${height}`, width, height, shapes, projection: { minX, maxY, k, scale } };
 }
 
 /** Pick a numeric property, tolerating string IDs. */

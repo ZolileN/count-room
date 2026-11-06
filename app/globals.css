@@ -121,6 +121,27 @@ a {
   }
 }
 
+/* Footer credit: the tally's fifth stroke draws itself, the name gives a little wiggle. */
+.credit-strike {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  transition: stroke-dashoffset 450ms cubic-bezier(0.6, 0, 0.2, 1);
+}
+.credit:hover .credit-strike,
+.credit:focus-visible .credit-strike {
+  stroke-dashoffset: 0;
+}
+@keyframes credit-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+.credit:hover .credit-name,
+.credit:focus-visible .credit-name {
+  display: inline-block;
+  animation: credit-wiggle 380ms ease-in-out 2;
+}
+
 /* Thin horizontal scroller for the nav on small screens. */
 .scroll-x {
   overflow-x: auto;

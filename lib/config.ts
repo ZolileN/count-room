@@ -13,6 +13,9 @@ export function siteUrl(): string {
   return "http://localhost:3000";
 }
 
+/** Who built it (footer credit). */
+export const DEVELOPER = { name: "Zolile Nonzapa", url: "https://dev.mlkcomputer.com/" } as const;
+
 export const SOURCE_LINE = "Source: Electoral Commission of South Africa (IEC). Provisional until declared.";
 
 /** Honest User-Agent for every request we make to the IEC. */
