@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/*
+ * Design tokens. Light by default; dark via prefers-color-scheme.
+ * Backgrounds are mirrored in lib/theme.ts (party colours are contrast-tested against them).
+ */
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efede8;
+  --ink: #16181b;
+  --ink-2: #474c54;
+  --ink-3: #62666e;
+  --line: #e2dfd8;
+  --line-strong: #c4c0b7;
+  --track: #e7e4dd;
+  /* Status: hung councils. Always paired with the word "Hung", never colour alone. */
+  --hung: #b45309;
+  --hung-bg: #fdf0d5;
+  --hung-ink: #7a3a06;
+  --focus: #1d4ed8;
+  --stale-bg: #fdf0d5;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101214;
+    --surface: #191c1f;
+    --surface-2: #22262a;
+    --ink: #eceae6;
+    --ink-2: #bdb9b2;
+    --ink-3: #96928b;
+    --line: #2b2f34;
+    --line-strong: #41464d;
+    --track: #2d3136;
+    --hung: #f59e0b;
+    --hung-bg: #372608;
+    --hung-ink: #fcd27a;
+    --focus: #7aa7ff;
+    --stale-bg: #372608;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-track: var(--track);
+  --color-hung: var(--hung);
+  --color-hung-bg: var(--hung-bg);
+  --color-hung-ink: var(--hung-ink);
+  --color-focus: var(--focus);
+  --font-display: var(--font-archivo), "Arial Narrow", system-ui, sans-serif;
+  --font-sans: var(--font-plex-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+/* Condensed display face for headings and big numbers. */
+.display {
+  font-family: var(--font-display);
+  font-stretch: 78%;
+  letter-spacing: -0.01em;
+}
+
+/* Tallies: mono with tabular figures so columns line up while they update. */
+.tally {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Thin horizontal scroller for the nav on small screens. */
+.scroll-x {
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+}

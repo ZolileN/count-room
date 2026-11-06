@@ -10,7 +10,8 @@ import {
   simulateCouncil,
   type SeatHolder,
 } from "./coalitions";
-import { majorityLine } from "./seats";
+import { allocateMixedMember, allocateSeats, majorityLine } from "./seats";
+import { buildCouncilSimInput } from "./inputs";
 
 const fx = (f: string) => JSON.parse(readFileSync(join(process.cwd(), "fixtures", f), "utf8")) as unknown;
 
@@ -119,6 +120,28 @@ describe("analyseCouncil on fixtures", () => {
     expect(a.seatsSource).toBe("declared");
     expect(a.rows.reduce((x, r) => x + r.seats, 0)).toBe(m.totalSeats);
     assertMinimal(a.coalitions, a.rows, a.totalSeats);
+  });
+
+  it("modelled point seats equal a direct allocation of the counted votes (regression: shares vs votes)", () => {
+    const m = normaliseMunic(fx("2026/munic1001.json"));
+    for (const model of ["droop", "mmp"] as const) {
+      const input = buildCouncilSimInput(m, model);
+      const sim = simulateCouncil(input, 50);
+      const direct =
+        model === "droop"
+          ? allocateSeats(input.parties, input.totalSeats - (input.independentWardSeats ?? 0))
+          : allocateMixedMember({ parties: input.parties, seats: input.totalSeats, independentWardSeats: input.independentWardSeats ?? 0 });
+      for (const d of direct) expect(sim.seats.get(d.id)).toBe(d.seats);
+      // A party with well under half a quota of votes cannot win a seat.
+      const total = input.parties.reduce((a, p) => a + p.votes, 0);
+      const tiny = input.parties.filter((p) => p.votes / total < 0.2 / input.totalSeats && p.wardSeats === 0);
+      expect(tiny.length).toBeGreaterThan(0);
+      for (const p of tiny) expect(sim.seats.get(p.id)).toBe(0);
+      // Simulated draws stay close to the point estimate for the largest party.
+      const big = input.parties[0]!.id;
+      const r = sim.ranges.get(big)!;
+      expect(Math.abs(r.p50 - sim.seats.get(big)!)).toBeLessThanOrEqual(2);
+    }
   });
 
   it("models seats for a council still counting", () => {

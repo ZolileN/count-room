@@ -4,8 +4,10 @@
  * Short codes come from the IEC PartyList.js abbreviations, with casing overrides below. Colours
  * follow a party's conventional colour where one exists, and otherwise are chosen to be
  * distinguishable. Every colour is checked (lib/parties.test.ts) for at least 3:1 contrast against
- * the page background in both light and dark themes. Colour is never the only cue: party codes are
- * always printed next to swatches and bars.
+ * the page background in both light and dark themes. The ten largest parties were also run through a
+ * colour-vision-deficiency separation check in vote order; MKP/EFF is the closest pair (ΔE ≈ 7), so
+ * colour is never the only cue: party codes are always printed next to swatches and bars, and
+ * stacked segments are separated by gaps.
  */
 import { IND_ID, OTHER_ID } from "./iec/types";
 
@@ -46,16 +48,16 @@ export interface PartyColour {
 
 /** Curated colours, keyed by IEC party ID. */
 export const PARTY_COLOURS: Record<number, PartyColour> = {
-  7: { light: "#15803d", dark: "#4ade80" }, // ANC: green
-  52: { light: "#1d4ed8", dark: "#60a5fa" }, // DA: blue
-  1748: { light: "#7c5e10", dark: "#d4b04c" }, // MKP: black/gold, shown as dark gold
-  945: { light: "#b91c1c", dark: "#f87171" }, // EFF: red
-  4: { light: "#c2410c", dark: "#fb923c" }, // VF Plus: orange
-  3: { light: "#9d174d", dark: "#f472b6" }, // IFP
-  957: { light: "#6d28d9", dark: "#a78bfa" }, // PA
-  1511: { light: "#0f766e", dark: "#2dd4bf" }, // ActionSA
-  445: { light: "#92400e", dark: "#d6a06b" }, // SACP
-  1318: { light: "#0369a1", dark: "#38bdf8" }, // ATM
+  7: { light: "#15803d", dark: "#16a34a" }, // ANC: green
+  52: { light: "#1d4ed8", dark: "#3b82f6" }, // DA: blue
+  1748: { light: "#854d0e", dark: "#c9a227" }, // MKP: black/gold, shown as gold
+  945: { light: "#e11d48", dark: "#f43f5e" }, // EFF: red
+  4: { light: "#ea580c", dark: "#e8661a" }, // VF Plus: orange
+  3: { light: "#c026d3", dark: "#d946ef" }, // IFP
+  957: { light: "#7c3aed", dark: "#8b5cf6" }, // PA
+  1511: { light: "#0d9488", dark: "#0d9f8f" }, // ActionSA
+  445: { light: "#be185d", dark: "#ec4899" }, // SACP
+  1318: { light: "#0284c7", dark: "#0b94d1" }, // ATM
   6: { light: "#4d7c0f", dark: "#a3e635" }, // UDM
   1368: { light: "#0e7490", dark: "#67e8f9" }, // GOOD
   18: { light: "#1e3a8a", dark: "#93c5fd" }, // ACDP
@@ -137,10 +139,21 @@ export function shortName(id: number, iecName: string | undefined, lookup?: Part
   return `Party ${id}`;
 }
 
+/** Full names where title-casing the IEC name reads wrongly. */
+const DISPLAY_OVERRIDES: Record<number, string> = {
+  1511: "ActionSA",
+  4: "Freedom Front Plus (VF Plus)",
+  1748: "uMkhonto weSizwe Party",
+  1368: "GOOD",
+  445: "South African Communist Party",
+  957: "Patriotic Alliance",
+};
+
 /** Full name in readable case, e.g. "African National Congress". */
 export function displayName(iecName: string | undefined, id: number): string {
   if (id === IND_ID) return "Independent candidates";
   if (id === OTHER_ID) return "All other parties";
+  if (DISPLAY_OVERRIDES[id]) return DISPLAY_OVERRIDES[id];
   return iecName ? titleCase(iecName.trim()) : `Party ${id}`;
 }
 

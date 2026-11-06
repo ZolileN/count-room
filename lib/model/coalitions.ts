@@ -138,14 +138,16 @@ export function simulateCouncil(input: CouncilSimInput, sims = DEFAULT_COUNCIL_S
   const u = uncountedFraction(input.vdsComplete, input.vdsExpected);
   const s0 = seed ?? hashSeed(`${input.model}|${input.totalSeats}|${input.vdsComplete}|${input.parties.map((p) => `${p.id}:${p.votes}:${p.wardSeats}`).join(",")}`);
 
-  const point = allocate(input.model, ids, base, input);
+  // The allocators work on vote counts (quotas are whole votes), so scale shares back to votes.
+  const toVotes = (shares: ArrayLike<number>) => Float64Array.from(shares, (sh) => (sh / 100) * total);
+  const point = allocate(input.model, ids, input.parties.map((p) => p.votes), input);
   const z = gaussian(mulberry32(s0));
   const buf = new Float64Array(ids.length);
   const n = u > 0 ? sims : 1;
   const draws: Int32Array[] = [];
   for (let s = 0; s < n; s++) {
-    const shares = u > 0 ? perturbShares(base, u, z, buf) : base;
-    draws.push(Int32Array.from(allocate(input.model, ids, shares, input)));
+    const votes = u > 0 ? toVotes(perturbShares(base, u, z, buf)) : input.parties.map((p) => p.votes);
+    draws.push(Int32Array.from(allocate(input.model, ids, votes, input)));
   }
 
   const ranges = new Map<number, { p5: number; p50: number; p95: number }>();
