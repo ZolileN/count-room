@@ -29,6 +29,7 @@ import type {
 } from "./types";
 import { buildPartyLookup, shortName, type PartyLookup } from "../parties";
 import { METRO_IDS } from "../config";
+export { majorityLine } from "../model/seats";
 
 type ProgressSource = Partial<Record<
   | "VDsComplete" | "VDExpected" | "WardsComplete" | "WardExpected" | "SeatsComplete" | "SeatsExpected"
@@ -109,10 +110,6 @@ export function councilKind(id: number, code: string): CouncilKind {
 export function councilStatus(declared: boolean, totalSeats: number, maxSeats: number): CouncilStatus {
   if (!declared) return "counting";
   return maxSeats > totalSeats / 2 ? "majority" : "hung";
-}
-
-export function majorityLine(totalSeats: number): number {
-  return Math.floor(totalSeats / 2) + 1;
 }
 
 function summariseCouncil(m: RawMunicipalityResult, parties: PartyResult[], rawParties: RawPartyBallotResult[]): CouncilSummary {
