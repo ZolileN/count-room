@@ -20,6 +20,11 @@
   --hung-ink: #7a3a06;
   --focus: #1d4ed8;
   --stale-bg: #fdf0d5;
+  /* Swing maps: a diverging pair with a neutral midpoint. Never used for parties. */
+  --gain: #0f766e;
+  --loss: #c2410c;
+  --map-neutral: #dedad2;
+  --map-stroke: #ffffff;
   color-scheme: light;
 }
 
@@ -39,6 +44,10 @@
     --hung-ink: #fcd27a;
     --focus: #7aa7ff;
     --stale-bg: #372608;
+    --gain: #2dd4bf;
+    --loss: #fb923c;
+    --map-neutral: #3a3f45;
+    --map-stroke: #101214;
     color-scheme: dark;
   }
 }

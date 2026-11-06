@@ -4,6 +4,15 @@ export const APP_NAME = "Count Room";
 export const APP_DESCRIPTION =
   "Live count, province-stratified projection and council seat arithmetic for the 2026 South African local government elections.";
 
+/** Public site URL for share links and preview images. Vercel sets VERCEL_PROJECT_PRODUCTION_URL. */
+export function siteUrl(): string {
+  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
+  if (explicit) return explicit.replace(/\/$/, "");
+  const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL;
+  if (vercel) return `https://${vercel}`;
+  return "http://localhost:3000";
+}
+
 export const SOURCE_LINE = "Source: Electoral Commission of South Africa (IEC). Provisional until declared.";
 
 /** Honest User-Agent for every request we make to the IEC. */

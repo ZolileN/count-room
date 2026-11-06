@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // ISR pages revalidate every 60 s; with expireTime 120 the CDN header becomes
   // "s-maxage=60, stale-while-revalidate=60", matching the IEC's own max-age.
   expireTime: 120,
+  async headers() {
+    return [
+      // Content-hashed boundary files never change.
+      { source: "/maps/:file*", headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }] },
+    ];
+  },
   // Bundle the PartyList fixture so party names resolve even if the IEC is down.
   outputFileTracingIncludes: {
     "/**": ["./fixtures/partylist.json"],

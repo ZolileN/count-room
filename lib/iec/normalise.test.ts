@@ -90,6 +90,12 @@ describe("drift handling", () => {
 });
 
 describe("helpers", () => {
+  it("ignores the IEC's '-' placeholder candidate names", async () => {
+    const { candidateName } = await import("./normalise");
+    expect(candidateName("-")).toBeUndefined();
+    expect(candidateName(" ROELOF DAVID BASSON ")).toBe("ROELOF DAVID BASSON");
+    expect(candidateName(null)).toBeUndefined();
+  });
   it("splits IEC municipality names", () => {
     expect(splitMunicipalityName("EC442 - Umzimvubu", 1031)).toEqual({ code: "EC442", name: "Umzimvubu" });
     expect(splitMunicipalityName("NC062 - NAMA KHOI", 1)).toEqual({ code: "NC062", name: "Nama Khoi" });

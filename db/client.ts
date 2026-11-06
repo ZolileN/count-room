@@ -1,7 +1,7 @@
 import { neon } from "@neondatabase/serverless";
 import { asc, sql } from "drizzle-orm";
 import { drizzle, type NeonHttpDatabase } from "drizzle-orm/neon-http";
-import { latestSnapshot as latestTable, snapshots } from "./schema";
+import { aiUsage, latestSnapshot as latestTable, snapshots } from "./schema";
 import type { SnapshotPayload } from "./payload";
 import { timelinePoint, type TimelinePoint } from "../lib/snapshot";
 
@@ -69,4 +69,16 @@ export async function timelinePoints(limit = 2000): Promise<TimelinePoint[]> {
     .where(sql`${snapshots.id} in (select id from snapshots order by report_date desc limit ${limit})`)
     .orderBy(asc(snapshots.reportDate));
   return rows.map((r) => r.payload);
+}
+
+/** Atomically count one AI answer for today; returns today's total, or null without a database. */
+export async function incrementAiUsage(day: string): Promise<number | null> {
+  const d = getDb();
+  if (!d) return null;
+  const rows = await d
+    .insert(aiUsage)
+    .values({ day, count: 1 })
+    .onConflictDoUpdate({ target: aiUsage.day, set: { count: sql`${aiUsage.count} + 1` } })
+    .returning({ count: aiUsage.count });
+  return rows[0]?.count ?? null;
 }

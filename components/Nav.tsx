@@ -5,9 +5,12 @@ import { usePathname } from "next/navigation";
 
 const LINKS = [
   { href: "/", label: "Count" },
+  { href: "/map", label: "Map" },
   { href: "/projection", label: "Projection" },
   { href: "/councils", label: "Councils" },
   { href: "/metros", label: "Metros" },
+  { href: "/timeline", label: "Timeline" },
+  ...(process.env.NEXT_PUBLIC_AI_ENABLED === "1" ? [{ href: "/ask", label: "Ask" }] : []),
   { href: "/method", label: "Method" },
 ];
 

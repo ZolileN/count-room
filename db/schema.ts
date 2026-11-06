@@ -1,4 +1,4 @@
-import { index, integer, jsonb, pgTable, serial, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgTable, serial, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
 import type { SnapshotPayload } from "./payload";
 import type { TimelinePoint } from "../lib/snapshot";
 
@@ -32,3 +32,9 @@ export const latestSnapshot = pgTable("latest_snapshot", {
 });
 
 export type SnapshotRow = typeof snapshots.$inferSelect;
+
+/** AI analyst answers generated per day (UTC date), for the site-wide daily cap. */
+export const aiUsage = pgTable("ai_usage", {
+  day: text("day").primaryKey(),
+  count: integer("count").notNull().default(0),
+});

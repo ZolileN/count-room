@@ -16,9 +16,12 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "capture-snapshot": "tsx scripts/capture-snapshot.ts",
-    "build-map": "tsx scripts/build-map.ts"
+    "build-map": "tsx scripts/build-map.ts",
+    "mock-iec": "tsx scripts/mock-iec.ts",
+    "loadtest": "tsx scripts/loadtest.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.1.0",
     "@neondatabase/serverless": "1.2.0",
     "drizzle-orm": "0.45.4",
     "next": "15.5.29",

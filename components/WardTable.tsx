@@ -1,10 +1,11 @@
+import Link from "next/link";
 import type { Ward } from "@/lib/iec/types";
 import { fmtInt, fmtPct } from "@/lib/format";
 import { Swatch } from "./Party";
 import { titleCase } from "@/lib/parties";
 
 /** Ward winners (or leaders) and margins from the ward ballot. */
-export function WardTable({ wards }: { wards: Ward[] }) {
+export function WardTable({ wards, councilId }: { wards: Ward[]; councilId: number }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-line bg-surface">
       <table className="w-full min-w-[34rem] text-sm">
@@ -24,7 +25,9 @@ export function WardTable({ wards }: { wards: Ward[] }) {
             const margin = a && w.valid > 0 ? ((a.votes - (b?.votes ?? 0)) / w.valid) * 100 : null;
             return (
               <tr key={w.id}>
-                <th scope="row" className="tally px-3 py-2 text-left font-medium">{w.number}</th>
+                <th scope="row" className="tally px-3 py-2 text-left font-medium">
+                  <Link href={`/councils/${councilId}/wards/${w.number}`} className="underline decoration-line-strong">{w.number}</Link>
+                </th>
                 <td className="px-3 py-2">
                   {a ? (
                     <span className="flex items-center gap-1.5">

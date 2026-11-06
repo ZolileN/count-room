@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import Link from "next/link";
-import { APP_DESCRIPTION, APP_NAME, SOURCE_LINE } from "@/lib/config";
+import { APP_DESCRIPTION, APP_NAME, SOURCE_LINE, siteUrl } from "@/lib/config";
 import { partyColourCss } from "@/lib/parties";
 import { AutoRefresh } from "@/components/AutoRefresh";
 import { Nav } from "@/components/Nav";
+import { Analytics } from "@/components/Analytics";
 import "./globals.css";
 
 const archivo = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--font-archivo", display: "swap" });
@@ -12,10 +13,12 @@ const plexSans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600
 const plexMono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex-mono", display: "swap" });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl()),
   title: { default: `${APP_NAME}: 2026 local election results`, template: `%s · ${APP_NAME}` },
   description: APP_DESCRIPTION,
   applicationName: APP_NAME,
-  openGraph: { title: APP_NAME, description: APP_DESCRIPTION, type: "website", siteName: APP_NAME },
+  openGraph: { title: `${APP_NAME}: live 2026 local election results`, description: APP_DESCRIPTION, type: "website", siteName: APP_NAME, locale: "en_ZA" },
+  twitter: { card: "summary_large_image", title: `${APP_NAME}: live 2026 local election results`, description: APP_DESCRIPTION },
   robots: { index: true, follow: true },
 };
 
@@ -64,6 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <p className="text-xs text-ink-3">{APP_NAME} · Not affiliated with the IEC.</p>
           </div>
         </footer>
+        <Analytics />
       </body>
     </html>
   );

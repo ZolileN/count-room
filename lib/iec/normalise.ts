@@ -81,8 +81,15 @@ export function normaliseParty(p: RawPartyBallotResult, lookup?: PartyLookup): P
   };
   if (p.CouncilsWon !== undefined) out.councilsWon = p.CouncilsWon;
   if (p.MajorityWon !== undefined) out.majoritiesWon = p.MajorityWon;
-  if (p.CandidateName) out.candidate = p.CandidateName.trim();
+  const cand = candidateName(p.CandidateName);
+  if (cand) out.candidate = cand;
   return out;
+}
+
+/** The IEC sends "-" for every candidate except declared ward winners. */
+export function candidateName(raw: string | null | undefined): string | undefined {
+  const t = raw?.trim();
+  return t && t !== "-" ? t : undefined;
 }
 
 export function normaliseParties(list: RawPartyBallotResult[], lookup?: PartyLookup): PartyResult[] {
@@ -229,7 +236,7 @@ export function normaliseWard(w: RawWardResult, lookup?: PartyLookup): Ward {
       id: p.ID,
       short: shortName(p.ID, p.Name, lookup),
       votes: n(p.WardVotes),
-      ...(p.CandidateName ? { candidate: p.CandidateName.trim() } : {}),
+      ...(candidateName(p.CandidateName) ? { candidate: candidateName(p.CandidateName)! } : {}),
     }))
     .filter((p) => p.votes > 0)
     .sort((a, b) => b.votes - a.votes || a.id - b.id);
